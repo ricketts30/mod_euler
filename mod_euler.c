@@ -14,7 +14,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <time.h>
 /*
  * Include the core server components.
  */
@@ -377,9 +377,12 @@ void problem_4(request_rec *r){
 void problem_5(request_rec *r){
 	// 2520 is the smallest number that can be divided by each of the numbers from 1 to 10 without any remainder.
 	// What is the smallest positive number that is evenly divisible by all of the numbers from 1 to 20?
+	time_t t1,t2;
+	int seconds = 0;
 	long smallest_number = 1;
 	long counter = 1;
 	unsigned char is_found = 0;
+	t1 = time(NULL);
 	while (is_found == 0 && smallest_number < 40000000000) {
 		is_found = 1;
 		for(counter = 1; counter < 21; counter++) {
@@ -390,10 +393,14 @@ void problem_5(request_rec *r){
 		if(is_found == 0)
 			smallest_number++;
 	}
+	t2 = time(NULL);
+	seconds = t2 - t1;
 	if(is_found != 0)
-		ap_rprintf(r, "<p>The smallest positive number that is evenly divisible by all of the numbers from 1 to 20 is <em>%d</em></p>\n", smallest_number);
+		ap_rprintf(r, "<p>[ %d seconds] The smallest positive number that is evenly divisible by all of the numbers from 1 to 20 is <em>%d</em></p>\n", seconds, smallest_number);
 	else
-		ap_rputs("<p>The smallest positive number that is entirely divisble by all the numbers from 1 to 20 is not found to be under 40 million!</p>\n", r);
+		ap_rprintf(r, "<p>[ %d seconds] The smallest positive number that is entirely divisble by all the numbers from 1 to 20 is not found to be under 40 million!</p>\n", seconds);
+	// that was none too fast... can we do any better
+	// TODO: a beter algorithm.
 }
 
 void problem_6(request_rec *r){
