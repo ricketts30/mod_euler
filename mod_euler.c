@@ -383,6 +383,7 @@ void problem_5(request_rec *r){
 	long counter = 1;
 	unsigned char is_found = 0;
 	t1 = time(NULL);
+	/*
 	while (is_found == 0 && smallest_number < 40000000000) {
 		is_found = 1;
 		for(counter = 1; counter < 21; counter++) {
@@ -399,8 +400,31 @@ void problem_5(request_rec *r){
 		ap_rprintf(r, "<p>[ %d seconds] The smallest positive number that is evenly divisible by all of the numbers from 1 to 20 is <em>%d</em></p>\n", seconds, smallest_number);
 	else
 		ap_rprintf(r, "<p>[ %d seconds] The smallest positive number that is entirely divisble by all the numbers from 1 to 20 is not found to be under 40 million!</p>\n", seconds);
-	// that was none too fast... can we do any better
+	*/
+	 // that was none too fast... can we do any better
 	// TODO: a beter algorithm.
+	seconds = 0;
+	smallest_number = 20;
+	counter = 1;
+	is_found = 0;
+	t1 = time(NULL);
+	while (is_found == 0 && smallest_number < 40000000000) {
+		is_found = 1;
+		for(counter = 3; counter < 21; counter++) {
+			if(smallest_number % counter != 0) {
+				is_found = 0;
+			}
+		}
+		if(is_found == 0)
+			smallest_number+=20;
+	}
+	t2 = time(NULL);
+	seconds = t2 - t1;
+	if(is_found != 0)
+		ap_rprintf(r, "<p>[ %d seconds] The smallest positive number that is evenly divisible by all of the numbers from 1 to 20 is <em>%d</em></p>\n", seconds, smallest_number);
+	else
+		ap_rprintf(r, "<p>[ %d seconds] The smallest positive number that is entirely divisble by all the numbers from 1 to 20 is not found to be under 40 million!</p>\n", seconds);
+	
 }
 
 void problem_6(request_rec *r){
