@@ -30,6 +30,10 @@ SetHandler euler-handler
 
 AddHandler euler-handler .euler
 
+# the single piece of config - if it can't open the file
+# it returns some pre-coded CSS instead.
+EulerStylesheetFilePath "/etc/apache2/mod_euler.css"
+
 Compile and Install
 ~~~~~~~~~~~~~~~~~~~
 

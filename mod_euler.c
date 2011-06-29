@@ -30,6 +30,9 @@
 
 #include "apr_strings.h"
 
+/* this module */
+module AP_MODULE_DECLARE_DATA euler_module;
+
 struct list_el {
 	int val;
 	char title[250];
@@ -39,6 +42,25 @@ struct list_el {
 };
 
 typedef struct list_el item;
+
+// this is a struct to hold configuration stuff
+// the things that we would be configuring are
+// the location of the style sheet
+// EulerStylesheetFilePath string char[250]
+
+typedef struct {
+	char *eulerStylesheetFilePath;
+} modEuler_config;
+
+#ifndef DEFAULT_EULER_STYLESHEET_FILE_PATH
+#define DEFAULT_EULER_STYLESHEET_FILE_PATH "/etc/apache2/euler.config"
+#endif
+
+#ifndef DEFAULT_EULER_LINE_LENGTH
+#define DEFAULT_EULER_LINE_LENGTH 100
+#endif
+
+
 
 int AddNewItem(item ** first, int eulerNumber, void (* execute)(request_rec *r), char *title); 
 void Setup(item ** first);
@@ -64,8 +86,18 @@ static int mod_euler_method_handler (request_rec *r)
 	// or it is zero or less (indicating that no problem was selected)
 	int eulerProblemNumber;
 	item * first;
-	
+	char line[DEFAULT_EULER_LINE_LENGTH];
+	modEuler_config *s_cfg;
+	// used for reading the stylesheet
+	FILE *fr;
 	first = NULL;
+	
+	// Get the module configuration
+	s_cfg = ap_get_module_config(r->server->module_config, &euler_module);
+	
+	// Send a message to the log file.
+	// [thanks to Min Xu for the security suggestion]
+	fprintf(stderr,"%s",s_cfg->eulerStylesheetFilePath);
 		
 	if (strcmp(r->handler, "euler-handler")) {
 		// this is not mine to handle
@@ -73,6 +105,27 @@ static int mod_euler_method_handler (request_rec *r)
         return DECLINED;
     }
 	
+	// check this is a request for the stylesheet
+
+	if(r->args != NULL && 0 == strcmp(r->args, "css")){
+		ap_set_content_type(r, "text/css");
+		fr = fopen(s_cfg->eulerStylesheetFilePath, "r");
+		if(NULL == fr){
+			// there isn't a file so return a dummy one
+			ap_rputs("/* mod_euler.css */ \n", r);
+			ap_rputs("/* normal file was missing */ \n", r);
+			ap_rputs("body { font-family: monospace; } \n", r);
+			ap_rputs("h1 { color: navy; } \n", r);
+		} else {
+			while(fgets(line, DEFAULT_EULER_LINE_LENGTH, fr) != NULL)
+			{
+				ap_rprintf(r, "%s", line);
+			}
+		}
+		fclose(fr);
+		return OK;
+	}
+
 	// important to set the mime-type
 	ap_set_content_type(r, "text/html");
 	
@@ -87,6 +140,10 @@ static int mod_euler_method_handler (request_rec *r)
 	// the standard HTML5 doctype
     ap_rputs("<!DOCTYPE html>\n", r);
 	ap_rputs("<html lang=\"en\">\n", r);
+	
+	// get the stylesheet
+	ap_rprintf(r, "<link rel=\"stylesheet\" type=\"text/css\" href=\"%s?css\" /> \n", r->uri);
+	
 	ap_rputs("<head>\n", r);
 	ap_rputs("<meta charset=\"utf-8\" />\n", r);
 	
@@ -127,6 +184,48 @@ static int mod_euler_method_handler (request_rec *r)
     return OK; // DECLINED, DONE, OK
 }
 
+// this is the hook to fire when creating the configuration
+static void *create_mod_euler_config(apr_pool_t *p, server_rec *s){
+	// the config record
+	modEuler_config *theConfig;
+	// allocate memory for it (
+	// Allocate memory from the provided pool.
+	theConfig = (modEuler_config *) apr_pcalloc(p, sizeof(modEuler_config));
+
+	theConfig->eulerStylesheetFilePath = DEFAULT_EULER_STYLESHEET_FILE_PATH;
+	
+	// Set the string to a default value.
+	//theConfig->eulerStylesheetFilePath = DEFAULT_EULER_STYLESHEET_FILE_PATH;
+	
+	// Return the created configuration struct.
+	// casting to the void pointer is a bit like returning an 'object'
+	return (void *) theConfig;
+	//return NULL;
+}
+
+static const char *set_mod_euler_string(cmd_parms *parms, void *mconfig, const char *arg)
+{
+	modEuler_config *s_cfg = ap_get_module_config(parms->server->module_config, &euler_module);
+	s_cfg->eulerStylesheetFilePath = (char *) arg;
+	// if OK return a NULL
+	// if a problem then return a string here an apache will pass it to the user
+	return NULL;
+}
+
+// this is an array: a list of the module settigs to pick up and process
+// in the httpd.conf file
+static const command_rec mod_euler_cmds[] =
+{
+	AP_INIT_TAKE1(
+			  "EulerStylesheetFilePath",
+			  set_mod_euler_string,
+			  NULL,
+			  RSRC_CONF,
+			  "MOD_EULER :: Problem with the config item - EulerStylesheetFilePath"
+			  ),
+	{NULL}
+};
+
 // this function handles registering the various hooks
 static void mod_euler_register_hooks (apr_pool_t *p)
 {
@@ -144,12 +243,14 @@ module AP_MODULE_DECLARE_DATA euler_module =
 	STANDARD20_MODULE_STUFF,
 	NULL,
 	NULL,
+	create_mod_euler_config,
 	NULL,
-	NULL,
-	NULL,
+	mod_euler_cmds,
 	// the callback function for registering hooks
 	mod_euler_register_hooks,
 };
+
+
 
 //////////////////////////////////////////////////////////////
 /// Problem Implementations and Setup ////////////////////////
